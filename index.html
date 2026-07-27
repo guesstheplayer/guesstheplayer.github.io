@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VCTLE — Adivina al pro de VCT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<style>
+:root{
+  --bg:#0b0d10;
+  --panel:#14171c;
+  --panel-2:#1b1f26;
+  --line:#2a2f38;
+  --red:#ff4655;
+  --red-dim:#7a1e28;
+  --gold:#ece8e1;
+  --muted:#8a92a3;
+  --correct:#3ddc84;
+  --correct-dim:#123a28;
+  --close:#ffb020;
+  --close-dim:#3a2c10;
+  --wrong:#232833;
+  --wrong-dim:#3a1418;
+  --wrong-red:#c73e4c;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--gold);font-family:'Chakra Petch',monospace;}
+.wrap{max-width:980px;margin:0 auto;padding:28px 18px 60px;}
+
+/* HEADER */
+.hero{
+  position:relative;
+  padding:22px 24px;
+  margin-bottom:22px;
+  background:linear-gradient(135deg, var(--panel) 0%, var(--panel-2) 100%);
+  border:1px solid var(--line);
+  clip-path:polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
+}
+.hero::before{
+  content:"";
+  position:absolute; left:0; top:0; bottom:0; width:4px;
+  background:var(--red);
+}
+.eyebrow{
+  font-family:'Rajdhani',sans-serif;
+  font-weight:600; letter-spacing:.35em; font-size:11px;
+  color:var(--red); text-transform:uppercase; margin:0 0 6px;
+}
+h1{
+  font-family:'Rajdhani',sans-serif; font-weight:700;
+  font-size:clamp(30px,6vw,46px); letter-spacing:.03em;
+  margin:0 0 6px; text-transform:uppercase;
+  color:var(--gold);
+}
+h1 span{color:var(--red);}
+.sub{color:var(--muted); font-size:14px; margin:0; line-height:1.5; max-width:560px;}
+
+/* REGION TABS */
+.tabs{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:18px 0;}
+.tab{
+  font-family:'Rajdhani',sans-serif; font-weight:600; letter-spacing:.08em;
+  text-transform:uppercase; font-size:13px;
+  background:var(--panel); border:1px solid var(--line); color:var(--muted);
+  padding:9px 16px; cursor:pointer; user-select:none;
+  clip-path:polygon(8px 0,100% 0,100% 100%,0 100%,0 8px);
+  transition:all .15s ease;
+  display:flex; align-items:center; gap:8px;
+}
+.tab:hover{color:var(--gold); border-color:#3a4150;}
+.tab.active{background:var(--red); color:#160306; border-color:var(--red);}
+.tab input{accent-color:#160306; width:14px; height:14px; cursor:pointer;}
+#applyRegionsBtn{
+  font-family:'Rajdhani',sans-serif; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+  font-size:13px; padding:9px 18px; cursor:pointer; border:1px solid var(--correct);
+  background:var(--correct-dim); color:var(--correct);
+  clip-path:polygon(8px 0,100% 0,100% 100%,0 100%,0 8px);
+}
+.regioncount{font-size:12px; color:var(--muted);}
+
+/* STATUS BAR */
+.statusbar{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px; flex-wrap:wrap;
+  margin-bottom:14px; padding:10px 16px;
+  background:var(--panel); border:1px solid var(--line);
+  font-size:13px; color:var(--muted);
+}
+.statusbar b{color:var(--gold); font-family:'Rajdhani',sans-serif;}
+.ammo{display:flex; gap:5px;}
+.pip{width:10px; height:14px; background:var(--wrong); border:1px solid var(--line);}
+.pip.used{background:var(--red-dim); border-color:var(--red);}
+
+/* INPUT */
+.guessbox{position:relative; margin-bottom:22px;}
+.guessform{display:flex; gap:10px;}
+#guessInput{
+  flex:1; background:var(--panel); border:1px solid var(--line); color:var(--gold);
+  font-family:'Chakra Petch',monospace; font-size:16px; padding:13px 16px;
+  outline:none; clip-path:polygon(10px 0,100% 0,100% 100%,0 100%,0 10px);
+}
+#guessInput:focus{border-color:var(--red);}
+#guessBtn{
+  font-family:'Rajdhani',sans-serif; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  background:var(--red); color:#160306; border:none; padding:0 26px; cursor:pointer;
+  clip-path:polygon(10px 0,100% 0,100% 100%,0 100%,0 10px);
+}
+#guessBtn:disabled{background:var(--wrong); color:var(--muted); cursor:not-allowed;}
+.suggestions{
+  position:absolute; top:100%; left:0; right:0; margin-top:4px; z-index:20;
+  background:var(--panel-2); border:1px solid var(--line); max-height:260px; overflow-y:auto;
+}
+.suggestion{padding:10px 16px; cursor:pointer; font-size:14px; display:flex; justify-content:space-between; border-bottom:1px solid var(--line);}
+.suggestion:last-child{border-bottom:none;}
+.suggestion:hover, .suggestion.hi{background:var(--panel);}
+.suggestion small{color:var(--muted);}
+
+/* BOARD */
+.board{display:flex; flex-direction:column; gap:8px;}
+.headerrow, .row{
+  display:grid;
+  grid-template-columns: 1.2fr .8fr .7fr 1fr .6fr 1.2fr .9fr;
+  gap:8px;
+}
+.cell .agentlist{display:flex; flex-direction:column; gap:1px; font-size:11px; line-height:1.3;}
+.cell .arrow{font-size:16px; line-height:1; margin-top:2px;}
+.headerrow div{
+  font-family:'Rajdhani',sans-serif; font-weight:600; letter-spacing:.1em; text-transform:uppercase;
+  font-size:11px; color:var(--muted); padding:0 4px;
+}
+.cell{
+  background:var(--wrong); border:1px solid var(--line);
+  padding:14px 10px; min-height:56px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+  font-family:'Rajdhani',sans-serif; font-weight:600; font-size:14px;
+  animation:flip .4s ease;
+}
+.cell .lbl{font-size:10px; color:var(--muted); font-weight:500; margin-bottom:2px; letter-spacing:.05em;}
+.cell.correct{background:var(--correct-dim); border-color:var(--correct); color:var(--correct);}
+.cell.close{background:var(--close-dim); border-color:var(--close); color:var(--close);}
+.cell.wrong{background:var(--wrong-dim); border-color:var(--wrong-red); color:var(--wrong-red);}
+.cell.name{background:var(--panel-2); border-color:#3a4150; color:var(--gold); font-weight:700; font-size:15px;}
+
+.agentslots{display:flex; gap:4px; width:100%; height:100%;}
+.agentslot{
+  flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  border:1px solid var(--line); padding:4px 2px; min-width:0;
+  background:var(--wrong-dim); border-color:var(--wrong-red);
+}
+.agentslot.correct{background:var(--correct-dim); border-color:var(--correct);}
+.agentslot.close{background:var(--close-dim); border-color:var(--close);}
+.agentslot img{width:22px; height:22px; border-radius:4px; background:#000;}
+.agentslot span{font-size:12px; font-weight:700; margin-top:2px; text-align:center; line-height:1.15; color:inherit;}
+
+.earnwrap{display:flex; align-items:center; justify-content:center; gap:8px;}
+.earnarrow{font-size:22px; line-height:1;}
+.earnval{font-size:13px;}
+@keyframes flip{from{transform:rotateX(90deg); opacity:0;} to{transform:rotateX(0); opacity:1;}}
+
+/* END STATE */
+.endcard{
+  margin-top:20px; padding:20px; background:var(--panel); border:1px solid var(--red);
+  clip-path:polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
+  display:none;
+}
+.endcard.show{display:block;}
+.endcard h2{font-family:'Rajdhani',sans-serif; margin:0 0 8px; text-transform:uppercase; letter-spacing:.04em;}
+.endcard.win h2{color:var(--correct);}
+.endcard.lose h2{color:var(--red);}
+.endcard p{margin:0 0 14px; color:var(--muted); font-size:14px;}
+.endcard .actions{display:flex; gap:10px; flex-wrap:wrap;}
+.btn{
+  font-family:'Rajdhani',sans-serif; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+  font-size:13px; padding:10px 18px; cursor:pointer; border:1px solid var(--line);
+  background:var(--panel-2); color:var(--gold);
+  clip-path:polygon(8px 0,100% 0,100% 100%,0 100%,0 8px);
+}
+.btn.primary{background:var(--red); color:#160306; border-color:var(--red);}
+
+/* LEGEND */
+.legend{display:flex; gap:18px; flex-wrap:wrap; margin-top:22px; font-size:12px; color:var(--muted);}
+.legend span{display:inline-flex; align-items:center; gap:6px;}
+.legend i{width:12px; height:12px; display:inline-block; border:1px solid var(--line);}
+.legend i.c{background:var(--correct-dim); border-color:var(--correct);}
+.legend i.k{background:var(--close-dim); border-color:var(--close);}
+.legend i.w{background:var(--wrong);}
+
+.footnote{margin-top:30px; font-size:12px; color:var(--muted); line-height:1.6; border-top:1px solid var(--line); padding-top:16px;}
+
+/* LOBBY */
+.lobbybar{display:flex; justify-content:flex-end; margin-bottom:10px;}
+.lobbybtn{
+  font-family:'Rajdhani',sans-serif; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+  font-size:12px; padding:8px 16px; cursor:pointer; border:1px solid var(--red); background:transparent; color:var(--red);
+  clip-path:polygon(8px 0,100% 0,100% 100%,0 100%,0 8px);
+}
+.lobbybtn:hover{background:var(--red); color:#160306;}
+.modal-overlay{
+  position:fixed; inset:0; background:rgba(5,6,8,.85); z-index:100;
+  display:flex; align-items:center; justify-content:center; padding:20px;
+}
+.modal-overlay.hidden{display:none;}
+.modal-box{
+  background:var(--panel); border:1px solid var(--line); max-width:420px; width:100%;
+  padding:26px; clip-path:polygon(0 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%);
+  position:relative;
+}
+.modal-box h3{font-family:'Rajdhani',sans-serif; text-transform:uppercase; letter-spacing:.04em; margin:0 0 4px; font-size:22px;}
+.modal-box p.hint{color:var(--muted); font-size:13px; margin:0 0 18px;}
+.modal-close{position:absolute; top:14px; right:16px; cursor:pointer; color:var(--muted); font-size:18px; background:none; border:none;}
+.modal-tabs{display:flex; gap:6px; margin-bottom:18px;}
+.modal-tab{flex:1; text-align:center; padding:9px; cursor:pointer; font-family:'Rajdhani',sans-serif; font-weight:600; letter-spacing:.05em; text-transform:uppercase; font-size:13px; background:var(--panel-2); border:1px solid var(--line); color:var(--muted);}
+.modal-tab.active{background:var(--red); color:#160306; border-color:var(--red);}
+.modal-field{margin-bottom:14px;}
+.modal-field label{display:block; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; font-family:'Rajdhani',sans-serif;}
+.modal-field input{width:100%; background:var(--panel-2); border:1px solid var(--line); color:var(--gold); font-family:'Chakra Petch',monospace; font-size:15px; padding:11px 14px; outline:none;}
+.modal-field input:focus{border-color:var(--red);}
+.modal-pane{display:none;}
+.modal-pane.active{display:block;}
+.modal-error{color:var(--wrong-red); font-size:12px; margin-top:-6px; margin-bottom:12px; min-height:14px;}
+.roomcode-display{
+  text-align:center; padding:18px; background:var(--panel-2); border:1px dashed var(--red); margin-bottom:16px;
+}
+.roomcode-display .code{font-family:'Rajdhani',sans-serif; font-weight:700; font-size:34px; letter-spacing:.2em; color:var(--red);}
+.roomcode-display .waiting{font-size:12px; color:var(--muted); margin-top:8px;}
+.spinner{display:inline-block; width:10px; height:10px; border:2px solid var(--muted); border-top-color:var(--red); border-radius:50%; animation:spin .8s linear infinite; margin-right:6px; vertical-align:middle;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.vsbar{
+  display:flex; align-items:center; gap:14px; margin-bottom:16px; padding:12px 16px;
+  background:var(--panel); border:1px solid var(--line);
+}
+.vsplayer{flex:1;}
+.vsplayer .vname{font-family:'Rajdhani',sans-serif; font-weight:700; font-size:14px; text-transform:uppercase; margin-bottom:6px; display:flex; align-items:center; gap:6px;}
+.vsplayer .vname.you::after{content:"(vos)"; font-size:10px; color:var(--muted); font-weight:500; text-transform:none;}
+.vspips{display:flex; gap:3px;}
+.vspip{width:9px; height:12px; background:var(--wrong); border:1px solid var(--line);}
+.vspip.used{background:var(--red-dim); border-color:var(--red);}
+.vspip.won{background:var(--correct-dim); border-color:var(--correct);}
+.vsstatus{font-size:11px; color:var(--muted); margin-top:4px;}
+.vsstatus.won{color:var(--correct);}
+.vsdivider{font-family:'Rajdhani',sans-serif; font-weight:700; color:var(--red); font-size:16px;}
+
+@media(max-width:640px){
+  .headerrow, .row{grid-template-columns: .9fr .7fr .6fr .8fr .5fr .9fr .7fr;}
+  .cell{font-size:10px; padding:7px 4px; min-height:48px;}
+  .cell .agentlist{font-size:8px;}
+  .headerrow div{font-size:7px;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <p class="eyebrow">Tier 1 · Americas · EMEA · Pacific · China</p>
+    <h1>VCT<span>LE</span></h1>
+    <p class="sub">Adiviná al jugador profesional de Valorant. Cada intento compara país, región, equipo, rol de IGL, sus 3 agentes más jugados (últimos 90 días) y earnings de carrera contra el jugador secreto. Elegí una, varias o las 4 regiones. Verde = correcto, ámbar = cerca, gris = no.</p>
+  </div>
+
+  <div class="lobbybar">
+    <button class="lobbybtn" id="openLobbyBtn" type="button">🎮 Jugar en lobby (2 jugadores)</button>
+  </div>
+
+  <!-- MODAL LOBBY -->
+  <div class="modal-overlay hidden" id="lobbyModal">
+    <div class="modal-box">
+      <button class="modal-close" id="closeLobbyBtn">✕</button>
+      <h3>Lobby VCTLE</h3>
+      <p class="hint">Creá una sala o unite con un código para enfrentar a otra persona adivinando al mismo jugador.</p>
+      <div class="modal-tabs">
+        <div class="modal-tab active" data-tab="create">Crear sala</div>
+        <div class="modal-tab" data-tab="join">Unirse</div>
+      </div>
+
+      <div class="modal-pane active" id="paneCreate">
+        <div class="modal-field">
+          <label>Tu nombre</label>
+          <input type="text" id="createName" maxlength="16" placeholder="Ej. Juan">
+        </div>
+        <div class="modal-field">
+          <label>Regiones</label>
+          <div class="tabs" id="lobbyRegionTabs" style="margin:0;"></div>
+        </div>
+        <div class="modal-error" id="createError"></div>
+        <button class="btn primary" id="createRoomBtn" type="button" style="width:100%;">Crear sala</button>
+      </div>
+
+      <div class="modal-pane" id="paneJoin">
+        <div class="modal-field">
+          <label>Tu nombre</label>
+          <input type="text" id="joinName" maxlength="16" placeholder="Ej. Pipo">
+        </div>
+        <div class="modal-field">
+          <label>Código de sala</label>
+          <input type="text" id="joinCode" maxlength="4" placeholder="Ej. XQ7T" style="text-transform:uppercase; letter-spacing:.2em;">
+        </div>
+        <div class="modal-error" id="joinError"></div>
+        <button class="btn primary" id="joinRoomBtn" type="button" style="width:100%;">Unirse</button>
+      </div>
+
+      <div id="roomWaitPane" style="display:none;">
+        <div class="roomcode-display">
+          <div class="code" id="roomCodeText">----</div>
+          <div class="waiting"><span class="spinner"></span>Esperando a que se una el rival…</div>
+        </div>
+        <button class="btn" id="cancelRoomBtn" type="button" style="width:100%;">Cancelar sala</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="vsbar" id="vsbar" style="display:none;"></div>
+
+  <div class="tabs" id="tabs"></div>
+
+  <div class="tabs" style="margin-top:-10px;">
+    <button id="applyRegionsBtn" type="button">Jugar con esta selección</button>
+    <span class="regioncount" id="regionCount"></span>
+  </div>
+
+  <div class="statusbar">
+    <div>Jugando en <b id="modeLabel">Tier 1 Global</b> · Intento <b id="guessCount">0</b></div>
+    <div class="ammo" id="ammo"></div>
+  </div>
+
+  <div class="guessbox">
+    <form class="guessform" id="guessForm" autocomplete="off">
+      <input id="guessInput" type="text" placeholder="Escribí el nick de un jugador…" />
+      <button id="guessBtn" type="submit">Adivinar</button>
+    </form>
+    <div class="suggestions" id="suggestions" style="display:none;"></div>
+  </div>
+
+  <div class="board">
+    <div class="headerrow">
+      <div>Jugador</div><div>País</div><div>Región</div><div>Equipo</div><div>IGL</div><div>Top 3 agentes</div><div>Earnings</div>
+    </div>
+    <div id="rows"></div>
+  </div>
+
+  <div class="endcard" id="endcard">
+    <h2 id="endTitle"></h2>
+    <p id="endText"></p>
+    <div class="actions">
+      <button class="btn primary" id="newGameBtn">Nueva partida</button>
+      <button class="btn" id="copyBtn">Copiar resultado</button>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><i class="c"></i> Correcto</span>
+    <span><i class="k"></i> Cerca (mismo continente / etc.)</span>
+    <span><i class="w"></i> Incorrecto</span>
+  </div>
+
+  <div class="footnote">
+    Rosters de Americas, EMEA y Pacific actualizados a partir de capturas de rosters oficiales (jul. 2026) — incluye altas recientes como Eternal Fire (ex ULF) y Natus Vincere. Rosters de China compilados a partir de vlr.gg y Esports Insider, con nacionalidades estimadas que pueden tener alguna imprecisión. La columna "Top 3 agentes" todavía no tiene datos cargados para la mayoría de los jugadores (aparece "Sin datos"): se va completando desde el perfil de cada jugador en vlr.gg. Juego infinito, no afiliado a Riot Games ni a VLR.gg.
+  </div>
+
+</div>
+
+<script>
+// ---------- DATA ----------
+// r: AMER / EMEA / PAC / CN   |  g: es IGL
+const PLAYERS = [
+// AMERICAS
+{n:"Asuna",c:"Estados Unidos",r:"AMER",t:"100 Thieves",g:0,e:212630,a:["Phoenix","Vyse","Sage"]},
+{n:"bang",c:"Estados Unidos",r:"AMER",t:"100 Thieves",g:0,e:209780,a:["Omen","Harbor","Astra"]},
+{n:"Cryocells",c:"Estados Unidos",r:"AMER",t:"100 Thieves",g:0,e:200660,a:["Cypher","Viper","Sova"]},
+{n:"vora",c:"Canadá",r:"AMER",t:"100 Thieves",g:1,e:131490,a:["Sova","Fade","Skye"]},
+{n:"Timotino",c:"Canadá",r:"AMER",t:"100 Thieves",g:0,e:131909,a:["Neon","Jett","Raze"]},
+{n:"Zellsis",c:"Estados Unidos",r:"AMER",t:"Cloud9",g:1,e:152775,a:["Vyse","Cypher","Harbor"]},
+{n:"FireBallOps",c:"Estados Unidos",r:"AMER",t:"Cloud9",g:0,e:3140,a:["Viper","Phoenix","Cypher"]},
+{n:"v1c",c:"Estados Unidos",r:"AMER",t:"Cloud9",g:0,e:21247,a:["Omen","Harbor","Brimstone"]},
+{n:"OXY",c:"Estados Unidos",r:"AMER",t:"Cloud9",g:0,e:17329,a:["Neon","Raze","Jett"]},
+{n:"Jackk",c:"Estados Unidos",r:"AMER",t:"Cloud9",g:0,e:1389,a:["Fade","Sova","Tejo"]},
+{n:"supamen",c:"Estados Unidos",r:"AMER",t:"Evil Geniuses",g:0,e:12800,a:["Omen","Viper","Astra"]},
+{n:"Paincakes",c:"Estados Unidos",r:"AMER",t:"Evil Geniuses",g:0,e:16145,a:["Fade","Sova","Skye"]},
+{n:"dgzin",c:"Brasil",r:"AMER",t:"Evil Geniuses",g:0,e:23488,a:["Neon","Jett","Vyse"]},
+{n:"zerona",c:"Estados Unidos",r:"AMER",t:"Evil Geniuses",g:0,e:2810,a:["Phoenix","Viper","Yoru"]},
+{n:"bao",c:"Vietnam",r:"AMER",t:"Evil Geniuses",g:0,e:4988,a:["Omen","Cypher","Vyse"]},
+{n:"C0M",c:"Estados Unidos",r:"AMER",t:"FURIA",g:1,e:340775,a:["Sova","Skye","Fade"]},
+{n:"koalanoob",c:"Canadá",r:"AMER",t:"FURIA",g:0,e:41447,a:["Jett","Raze","Phoenix"]},
+{n:"artzin",c:"Brasil",r:"AMER",t:"FURIA",g:0,e:35150,a:["KAY/O","Cypher","Omen"]},
+{n:"Shyy",c:"Chile",r:"AMER",t:"FURIA",g:0,e:48300,a:["Viper","Cypher","Killjoy"]},
+{n:"basic",c:"Brasil",r:"AMER",t:"FURIA",g:0,e:1283,a:["Omen","Harbor","KAY/O"]},
+{n:"saadhak",c:"Argentina",r:"AMER",t:"KRÜ Esports",g:1,e:217919,a:["Omen","Miks","Astra"]},
+{n:"mwzera",c:"Brasil",r:"AMER",t:"KRÜ Esports",g:0,e:25859,a:["Sova","Fade","Tejo"]},
+{n:"Less",c:"Brasil",r:"AMER",t:"KRÜ Esports",g:0,e:197138,a:["Viper","Cypher","Sage"]},
+{n:"heat",c:"Brasil",r:"AMER",t:"KRÜ Esports",g:0,e:30770,a:["Raze","Jett"]},
+{n:"Dantedeu5",c:"Argentina",r:"AMER",t:"KRÜ Esports",g:0,e:8986,a:["Neon","Jett","Phoenix"]},
+{n:"kiNgg",c:"Chile",r:"AMER",t:"LEVIATÁN",g:1,e:198308,a:["Viper","Astra","Omen"]},
+{n:"blowz",c:"Brasil",r:"AMER",t:"LEVIATÁN",g:0,e:85845,a:["Sova","Fade","Skye"]},
+{n:"Sato",c:"Brasil",r:"AMER",t:"LEVIATÁN",g:0,e:90191,a:["Phoenix","Raze","Omen"]},
+{n:"spike",c:"Brasil",r:"AMER",t:"LEVIATÁN",g:0,e:87079,a:["Neon","Omen","Deadlock"]},
+{n:"Neon",c:"Argentina",r:"AMER",t:"LEVIATÁN",g:0,e:85702,a:["Chamber","Jett","Omen"]},
+{n:"Darker",c:"Colombia",r:"AMER",t:"LOUD",g:0,e:20875,a:["Vyse","Cypher","Jett"]},
+{n:"DaviH",c:"Portugal",r:"AMER",t:"LOUD",g:0,e:15178,a:["Sova","Fade","Skye"]},
+{n:"lukxo",c:"Brasil",r:"AMER",t:"LOUD",g:0,e:9520,a:["Phoenix","Viper","Harbor"]},
+{n:"erde",c:"Chile",r:"AMER",t:"LOUD",g:0,e:10049,a:["Omen","Astra","KAY/O"]},
+{n:"tkzin",c:"Brasil",r:"AMER",t:"LOUD",g:0,e:4401,a:["Jett","Raze","Neon"]},
+{n:"tex",c:"Alemania",r:"AMER",t:"MIBR",g:0,e:134475,a:["Cypher","Vyse","Astra"]},
+{n:"zekken",c:"Estados Unidos",r:"AMER",t:"MIBR",g:0,e:185253,a:["Neon","Phoenix","Raze"]},
+{n:"Mazino",c:"Chile",r:"AMER",t:"MIBR",g:0,e:163270,a:["Omen","Harbor","Fade"]},
+{n:"aspas",c:"Brasil",r:"AMER",t:"MIBR",g:0,e:306282,a:["Jett","Neon","Waylay"]},
+{n:"Verno",c:"Estados Unidos",r:"AMER",t:"MIBR",g:1,e:59325,a:["Sova","Fade","Skye"]},
+{n:"brawk",c:"Estados Unidos",r:"AMER",t:"NRG",g:0,e:348448,a:["Sova","Vyse","Brimstone"]},
+{n:"mada",c:"Canadá",r:"AMER",t:"NRG",g:0,e:354672,a:["Harbor","Neon","Raze"]},
+{n:"skuba",c:"Estados Unidos",r:"AMER",t:"NRG",g:0,e:347600,a:["Viper","Cypher","Omen"]},
+{n:"Ethan",c:"Estados Unidos",r:"AMER",t:"NRG",g:1,e:620700,a:["Fade","KAY/O","Neon"]},
+{n:"keiko",c:"Reino Unido",r:"AMER",t:"NRG",g:0,e:159901,a:["Omen","Jett","Phoenix"]},
+{n:"johnqt",c:"Marruecos",r:"AMER",t:"Sentinels",g:1,e:141720,a:["Harbor","Omen","Viper"]},
+{n:"JonahP",c:"Canadá",r:"AMER",t:"Sentinels",g:0,e:152550,a:["Sova","Fade"]},
+{n:"cortezia",c:"Brasil",r:"AMER",t:"Sentinels",g:0,e:31792,a:["Viper","Vyse","Cypher"]},
+{n:"Reduxx",c:"Estados Unidos",r:"AMER",t:"Sentinels",g:0,e:19293,a:["Raze","Omen","Iso"]},
+{n:"Jerrwin",c:"India",r:"AMER",t:"Sentinels",g:0,e:3840,a:["Neon","Waylay","Raze"]},
+{n:"BABYBAY",c:"Estados Unidos",r:"AMER",t:"G2 Esports",g:0,e:70650,a:["Vyse","Chamber","Neon"]},
+{n:"valyn",c:"Estados Unidos",r:"AMER",t:"G2 Esports",g:1,e:199436,a:["Astra","Omen","Harbor"]},
+{n:"jawgemo",c:"Camboya",r:"AMER",t:"G2 Esports",g:0,e:375336,a:["Neon","Raze","KAY/O"]},
+{n:"leaf",c:"Estados Unidos",r:"AMER",t:"G2 Esports",g:0,e:194560,a:["Viper","Phoenix","Sage"]},
+{n:"trent",c:"Estados Unidos",r:"AMER",t:"G2 Esports",g:0,e:196846,a:["Fade","Sova","Skye"]},
+{n:"Rossy",c:"Estados Unidos",r:"AMER",t:"ENVY",g:0,e:14400,a:["Vyse","Viper","Cypher"]},
+{n:"keznit",c:"Chile",r:"AMER",t:"ENVY",g:0,e:68870,a:["Neon","Jett","Waylay"]},
+{n:"GLYPH",c:"Filipinas",r:"AMER",t:"ENVY",g:0,e:24610,a:["Omen","Astra","KAY/O"]},
+{n:"Demon1",c:"Estados Unidos",r:"AMER",t:"ENVY",g:0,e:253060,a:["Jett","Neon","Chamber"]},
+{n:"nightz",c:"Reino Unido",r:"AMER",t:"ENVY",g:0,e:10670,a:["Omen","Phoenix","Iso"]},
+// EMEA
+{n:"crashies",c:"Estados Unidos",r:"EMEA",t:"FNATIC",g:0},
+{n:"Boaster",c:"Reino Unido",r:"EMEA",t:"FNATIC",g:1},
+{n:"Cloud",c:"Rusia",r:"EMEA",t:"FNATIC",g:0},
+{n:"kaajak",c:"Polonia",r:"EMEA",t:"FNATIC",g:0},
+{n:"Alfajer",c:"Turquía",r:"EMEA",t:"FNATIC",g:0},
+{n:"sociablEE",c:"Turquía",r:"EMEA",t:"FUT Esports",g:0},
+{n:"yetujey",c:"Turquía",r:"EMEA",t:"FUT Esports",g:0},
+{n:"xeus",c:"Turquía",r:"EMEA",t:"FUT Esports",g:0},
+{n:"KROSTALY",c:"Turquía",r:"EMEA",t:"FUT Esports",g:0},
+{n:"s0pp",c:"Turquía",r:"EMEA",t:"FUT Esports",g:0},
+{n:"starxo",c:"Polonia",r:"EMEA",t:"Gentle Mates",g:1},
+{n:"marteen",c:"Chequia",r:"EMEA",t:"Gentle Mates",g:0},
+{n:"bipo",c:"Italia",r:"EMEA",t:"Gentle Mates",g:0},
+{n:"Minny",c:"Chequia",r:"EMEA",t:"Gentle Mates",g:0},
+{n:"Proxh",c:"Turquía",r:"EMEA",t:"Gentle Mates",g:0},
+{n:"Jesse",c:"Chequia",r:"EMEA",t:"GIANTX",g:0},
+{n:"neT",c:"Estados Unidos",r:"EMEA",t:"GIANTX",g:0},
+{n:"Flickless",c:"Bélgica",r:"EMEA",t:"GIANTX",g:0},
+{n:"ara",c:"Bélgica",r:"EMEA",t:"GIANTX",g:0},
+{n:"westside",c:"Polonia",r:"EMEA",t:"GIANTX",g:0},
+{n:"SUYGETSU",c:"Rusia",r:"EMEA",t:"Karmine Corp",g:0},
+{n:"Avez",c:"Egipto",r:"EMEA",t:"Karmine Corp",g:0},
+{n:"dos9",c:"Kazajistán",r:"EMEA",t:"Karmine Corp",g:0},
+{n:"LewN",c:"Turquía",r:"EMEA",t:"Karmine Corp",g:0},
+{n:"N4RRATE",c:"Estados Unidos",r:"EMEA",t:"Karmine Corp",g:0},
+{n:"ExiT",c:"Arabia Saudita",r:"EMEA",t:"Natus Vincere",g:0},
+{n:"CyvOph",c:"Francia",r:"EMEA",t:"Natus Vincere",g:0},
+{n:"chloric",c:"Estados Unidos",r:"EMEA",t:"Natus Vincere",g:0},
+{n:"Ruxic",c:"Turquía",r:"EMEA",t:"Natus Vincere",g:0},
+{n:"hiro",c:"Turquía",r:"EMEA",t:"Natus Vincere",g:0},
+{n:"Boo",c:"Lituania",r:"EMEA",t:"Team Heretics",g:1},
+{n:"RieNs",c:"Turquía",r:"EMEA",t:"Team Heretics",g:0},
+{n:"Wo0t",c:"Turquía",r:"EMEA",t:"Team Heretics",g:0},
+{n:"koshmaras",c:"Lituania",r:"EMEA",t:"Team Heretics",g:0},
+{n:"benjyfishy",c:"Reino Unido",r:"EMEA",t:"Team Heretics",g:0},
+{n:"nAts",c:"Rusia",r:"EMEA",t:"Team Liquid",g:1},
+{n:"purp0",c:"Rusia",r:"EMEA",t:"Team Liquid",g:0},
+{n:"trexx",c:"Rusia",r:"EMEA",t:"Team Liquid",g:0},
+{n:"LohaN",c:"Portugal",r:"EMEA",t:"Team Liquid",g:0},
+{n:"Kicks",c:"Alemania",r:"EMEA",t:"Team Liquid",g:0},
+{n:"kamo",c:"Polonia",r:"EMEA",t:"Team Liquid",g:0},
+{n:"Chronicle",c:"Rusia",r:"EMEA",t:"Team Vitality",g:0},
+{n:"Derke",c:"Finlandia",r:"EMEA",t:"Team Vitality",g:0},
+{n:"PROFEK",c:"Polonia",r:"EMEA",t:"Team Vitality",g:0},
+{n:"Jamppi",c:"Finlandia",r:"EMEA",t:"Team Vitality",g:1},
+{n:"Sayonara",c:"Rumania",r:"EMEA",t:"Team Vitality",g:0},
+{n:"Izzy",c:"Turquía",r:"EMEA",t:"Eternal Fire",g:0},
+{n:"nekky",c:"Turquía",r:"EMEA",t:"Eternal Fire",g:1},
+{n:"audaz",c:"Turquía",r:"EMEA",t:"Eternal Fire",g:0},
+{n:"Favian",c:"Turquía",r:"EMEA",t:"Eternal Fire",g:0},
+{n:"echo",c:"Turquía",r:"EMEA",t:"Eternal Fire",g:0},
+{n:"al0rante",c:"Alemania",r:"EMEA",t:"PCIFIC Esports",g:0},
+{n:"qpert",c:"Serbia",r:"EMEA",t:"PCIFIC Esports",g:1},
+{n:"waddle",c:"Reino Unido",r:"EMEA",t:"PCIFIC Esports",g:0},
+{n:"seven",c:"México",r:"EMEA",t:"PCIFIC Esports",g:0},
+{n:"NINJA",c:"Polonia",r:"EMEA",t:"PCIFIC Esports",g:0},
+{n:"Rosé",c:"Turquía",r:"EMEA",t:"BBL Esports",g:1},
+{n:"Crewen",c:"Turquía",r:"EMEA",t:"BBL Esports",g:0},
+{n:"Lar0k",c:"Turquía",r:"EMEA",t:"BBL Esports",g:0},
+{n:"Loita",c:"Turquía",r:"EMEA",t:"BBL Esports",g:0},
+{n:"lovers rock",c:"Turquía",r:"EMEA",t:"BBL Esports",g:0},
+// PACIFIC
+{n:"Meiy",c:"Japón",r:"PAC",t:"DetonatioN FocusMe",g:0},
+{n:"Akame",c:"Corea del Sur",r:"PAC",t:"DetonatioN FocusMe",g:0},
+{n:"SSeeS",c:"Japón",r:"PAC",t:"DetonatioN FocusMe",g:1},
+{n:"Caedye",c:"Japón",r:"PAC",t:"DetonatioN FocusMe",g:0},
+{n:"yatsuka",c:"Japón",r:"PAC",t:"DetonatioN FocusMe",g:0},
+{n:"free1ng",c:"Corea del Sur",r:"PAC",t:"KIWOOM DRX",g:0},
+{n:"MaKo",c:"Corea del Sur",r:"PAC",t:"KIWOOM DRX",g:1},
+{n:"BeYN",c:"Corea del Sur",r:"PAC",t:"KIWOOM DRX",g:0},
+{n:"HYUNMIN",c:"Corea del Sur",r:"PAC",t:"KIWOOM DRX",g:0},
+{n:"Flicker",c:"Corea del Sur",r:"PAC",t:"KIWOOM DRX",g:0},
+{n:"Crws",c:"Tailandia",r:"PAC",t:"FULL SENSE",g:0},
+{n:"Killua",c:"Tailandia",r:"PAC",t:"FULL SENSE",g:0},
+{n:"JitBoyS",c:"Tailandia",r:"PAC",t:"FULL SENSE",g:0},
+{n:"primmie",c:"Tailandia",r:"PAC",t:"FULL SENSE",g:0},
+{n:"seph1roth",c:"Tailandia",r:"PAC",t:"FULL SENSE",g:0},
+{n:"Efina",c:"Corea del Sur",r:"PAC",t:"Gen.G",g:0},
+{n:"t3xture",c:"Corea del Sur",r:"PAC",t:"Gen.G",g:0},
+{n:"Ash",c:"Corea del Sur",r:"PAC",t:"Gen.G",g:0},
+{n:"Karon",c:"Corea del Sur",r:"PAC",t:"Gen.G",g:0},
+{n:"Raxcal",c:"Corea del Sur",r:"PAC",t:"Gen.G",g:0},
+{n:"Autumn",c:"Australia",r:"PAC",t:"Global Esports",g:0},
+{n:"UdoTan",c:"Corea del Sur",r:"PAC",t:"Global Esports",g:0},
+{n:"Kr1stal",c:"Rusia",r:"PAC",t:"Global Esports",g:0},
+{n:"xavi8k",c:"Filipinas",r:"PAC",t:"Global Esports",g:1},
+{n:"PatMen",c:"Filipinas",r:"PAC",t:"Global Esports",g:0},
+{n:"Jinggg",c:"Singapur",r:"PAC",t:"Paper Rex",g:0},
+{n:"invy",c:"Filipinas",r:"PAC",t:"Paper Rex",g:0},
+{n:"f0rsakeN",c:"Indonesia",r:"PAC",t:"Paper Rex",g:1},
+{n:"d4v41",c:"Malasia",r:"PAC",t:"Paper Rex",g:0},
+{n:"something",c:"Rusia",r:"PAC",t:"Paper Rex",g:0},
+{n:"crazyguy",c:"Vietnam",r:"PAC",t:"Rex Regum Qeon",g:1},
+{n:"Kushy",c:"Indonesia",r:"PAC",t:"Rex Regum Qeon",g:0},
+{n:"xffero",c:"Indonesia",r:"PAC",t:"Rex Regum Qeon",g:0},
+{n:"Monyet",c:"Indonesia",r:"PAC",t:"Rex Regum Qeon",g:0},
+{n:"Jemkin",c:"Rusia",r:"PAC",t:"Rex Regum Qeon",g:0},
+{n:"BuZz",c:"Corea del Sur",r:"PAC",t:"T1",g:0},
+{n:"Munchkin",c:"Corea del Sur",r:"PAC",t:"T1",g:0},
+{n:"Meteor",c:"Corea del Sur",r:"PAC",t:"T1",g:0},
+{n:"iZu",c:"Corea del Sur",r:"PAC",t:"T1",g:0},
+{n:"DH",c:"Corea del Sur",r:"PAC",t:"T1",g:0},
+{n:"Sylvan",c:"Corea del Sur",r:"PAC",t:"Team Secret",g:0},
+{n:"natz",c:"Indonesia",r:"PAC",t:"Team Secret",g:0},
+{n:"kellyS",c:"Filipinas",r:"PAC",t:"Team Secret",g:0},
+{n:"STYRON",c:"Singapur",r:"PAC",t:"Team Secret",g:0},
+{n:"Zeus",c:"Filipinas",r:"PAC",t:"Team Secret",g:0},
+{n:"eKo",c:"Corea del Sur",r:"PAC",t:"ZETA DIVISION",g:0},
+{n:"SugarZ3ro",c:"Japón",r:"PAC",t:"ZETA DIVISION",g:1},
+{n:"SyouTa",c:"Japón",r:"PAC",t:"ZETA DIVISION",g:0},
+{n:"Xdll",c:"Japón",r:"PAC",t:"ZETA DIVISION",g:0},
+{n:"Absol",c:"Japón",r:"PAC",t:"ZETA DIVISION",g:0},
+{n:"C1ndeR",c:"Corea del Sur",r:"PAC",t:"VARREL",g:0},
+{n:"Foxy9",c:"Corea del Sur",r:"PAC",t:"VARREL",g:0},
+{n:"oonzmlp",c:"Corea del Sur",r:"PAC",t:"VARREL",g:0},
+{n:"Zexy",c:"Corea del Sur",r:"PAC",t:"VARREL",g:0},
+{n:"XuNa",c:"Corea del Sur",r:"PAC",t:"VARREL",g:0},
+{n:"Rb",c:"Corea del Sur",r:"PAC",t:"Nongshim RedForce",g:1},
+{n:"Dambi",c:"Corea del Sur",r:"PAC",t:"Nongshim RedForce",g:0},
+{n:"Francis",c:"Corea del Sur",r:"PAC",t:"Nongshim RedForce",g:0},
+{n:"Ivy",c:"Corea del Sur",r:"PAC",t:"Nongshim RedForce",g:0},
+{n:"Xross",c:"Corea del Sur",r:"PAC",t:"Nongshim RedForce",g:0},
+// CHINA
+{n:"nobody",c:"China",r:"CN",t:"EDward Gaming",g:1},
+{n:"CHICHOO",c:"China",r:"CN",t:"EDward Gaming",g:0},
+{n:"ZmjjKK",c:"China",r:"CN",t:"EDward Gaming",g:0},
+{n:"Smoggy",c:"China",r:"CN",t:"EDward Gaming",g:0},
+{n:"Jieni7",c:"China",r:"CN",t:"EDward Gaming",g:0},
+{n:"FengF",c:"China",r:"CN",t:"Trace Esports",g:0},
+{n:"Kai",c:"China",r:"CN",t:"Trace Esports",g:0},
+{n:"LuoK1ng",c:"China",r:"CN",t:"Trace Esports",g:0},
+{n:"Viva",c:"China",r:"CN",t:"Trace Esports",g:0},
+{n:"deLb",c:"Indonesia",r:"CN",t:"Trace Esports",g:0},
+{n:"nephh",c:"Singapur",r:"CN",t:"Bilibili Gaming",g:1},
+{n:"whzy",c:"China",r:"CN",t:"Bilibili Gaming",g:0},
+{n:"Knight",c:"China",r:"CN",t:"Bilibili Gaming",g:0},
+{n:"rushia",c:"China",r:"CN",t:"Bilibili Gaming",g:0},
+{n:"bud",c:"China",r:"CN",t:"Bilibili Gaming",g:0},
+{n:"Nicc",c:"China",r:"CN",t:"Dragon Ranger Gaming",g:1},
+{n:"vo0kashu",c:"Rusia",r:"CN",t:"Dragon Ranger Gaming",g:0},
+{n:"SpiritZ1",c:"China",r:"CN",t:"Dragon Ranger Gaming",g:0},
+{n:"Flex1n",c:"China",r:"CN",t:"Dragon Ranger Gaming",g:0},
+{n:"Akeman",c:"China",r:"CN",t:"Dragon Ranger Gaming",g:0},
+{n:"BerLIN",c:"Taiwán",r:"CN",t:"FunPlus Phoenix",g:1},
+{n:"AAAAY",c:"China",r:"CN",t:"FunPlus Phoenix",g:0},
+{n:"Life",c:"China",r:"CN",t:"FunPlus Phoenix",g:0},
+{n:"sScary",c:"Tailandia",r:"CN",t:"FunPlus Phoenix",g:0},
+{n:"Setrod",c:"China",r:"CN",t:"FunPlus Phoenix",g:0},
+{n:"Rarga",c:"Rusia",r:"CN",t:"XLG Esports",g:0},
+{n:"happywei",c:"China",r:"CN",t:"XLG Esports",g:0},
+{n:"NoMan",c:"China",r:"CN",t:"XLG Esports",g:0},
+{n:"Lysoar",c:"China",r:"CN",t:"XLG Esports",g:0},
+{n:"WsLeo",c:"Taiwán",r:"CN",t:"XLG Esports",g:0},
+{n:"HeiB",c:"Hong Kong",r:"CN",t:"Nova Esports",g:1},
+{n:"OBONE",c:"China",r:"CN",t:"Nova Esports",g:0},
+{n:"GuanG",c:"China",r:"CN",t:"Nova Esports",g:0},
+{n:"Ezeir",c:"China",r:"CN",t:"Nova Esports",g:0},
+{n:"Green",c:"Taiwán",r:"CN",t:"Nova Esports",g:0},
+{n:"jkuro",c:"Hong Kong",r:"CN",t:"JDG Esports",g:0},
+{n:"stew",c:"Corea del Sur",r:"CN",t:"JDG Esports",g:0},
+{n:"Yuicaw",c:"Taiwán",r:"CN",t:"JDG Esports",g:0},
+{n:"zhe",c:"China",r:"CN",t:"JDG Esports",g:0},
+{n:"coconut",c:"Hong Kong",r:"CN",t:"JDG Esports",g:0},
+{n:"SiuFatBB",c:"Hong Kong",r:"CN",t:"Wolves Esports",g:1},
+{n:"Spring",c:"Taiwán",r:"CN",t:"Wolves Esports",g:0},
+{n:"jowa",c:"China",r:"CN",t:"Wolves Esports",g:0},
+{n:"yosemite",c:"China",r:"CN",t:"Wolves Esports",g:0},
+{n:"qiutiaN",c:"China",r:"CN",t:"Wolves Esports",g:0},
+{n:"slowly",c:"China",r:"CN",t:"TYLOO",g:1},
+{n:"Scales",c:"China",r:"CN",t:"TYLOO",g:0},
+{n:"sword9",c:"China",r:"CN",t:"TYLOO",g:0},
+{n:"Splash",c:"Indonesia",r:"CN",t:"TYLOO",g:0},
+{n:"Erv",c:"China",r:"CN",t:"TYLOO",g:0},
+{n:"Haodong",c:"China",r:"CN",t:"Titan Esports Club",g:0},
+{n:"Abo",c:"China",r:"CN",t:"Titan Esports Club",g:0},
+{n:"CoCo",c:"China",r:"CN",t:"Titan Esports Club",g:0},
+{n:"lucas",c:"China",r:"CN",t:"Titan Esports Club",g:0},
+{n:"dynamite",c:"China",r:"CN",t:"Titan Esports Club",g:0},
+{n:"K1ra",c:"China",r:"CN",t:"All Gamers",g:0},
+{n:"Shr1mp",c:"China",r:"CN",t:"All Gamers",g:0},
+{n:"iamgrq",c:"China",r:"CN",t:"All Gamers",g:0},
+{n:"Au1",c:"China",r:"CN",t:"All Gamers",g:0},
+{n:"f4ngeer",c:"Rusia",r:"CN",t:"All Gamers",g:0},
+];
+
+const REGION_LABEL = {AMER:"Americas", EMEA:"EMEA", PAC:"Pacific", CN:"China", ALL:"Tier 1 Global"};
+const CONTINENT = {
+  "Finlandia":"Europa","Rumania":"Europa","Rusia":"Europa","Polonia":"Europa","Lituania":"Europa",
+  "Reino Unido":"Europa","Turquía":"Europa","Bélgica":"Europa","Chequia":"Europa","Serbia":"Europa",
+  "Austria":"Europa","España":"Europa","Francia":"Europa","Bosnia y Herzegovina":"Europa",
+  "Letonia":"Europa","Islandia":"Europa","Eslovaquia":"Europa","Portugal":"Europa","Italia":"Europa","Alemania":"Europa","Bélgica":"Europa",
+  "Kazajistán":"Asia","Marruecos":"África","Egipto":"África",
+  "Estados Unidos":"América","Canadá":"América","Brasil":"América","Argentina":"América","Chile":"América","Costa Rica":"América",
+  "Colombia":"América","México":"América","Panamá":"América",
+  "Kirguistán":"Asia","Corea del Sur":"Asia","Japón":"Asia","Tailandia":"Asia","Vietnam":"Asia","Indonesia":"Asia",
+  "Malasia":"Asia","Singapur":"Asia","Filipinas":"Asia","India":"Asia","China":"Asia","Taiwán":"Asia","Hong Kong":"Asia","Camboya":"Asia","Arabia Saudita":"Asia",
+  "Australia":"Oceanía"
+};
+
+// ---------- AGENT ICONS (valorant-api.com, público y sin auth) ----------
+let AGENT_ICONS = {}; // nombre en minúsculas -> url del ícono
+async function loadAgentIcons(){
+  try{
+    const res = await fetch("https://valorant-api.com/v1/agents?isPlayableCharacter=true");
+    const json = await res.json();
+    (json.data || []).forEach(a=>{
+      AGENT_ICONS[a.displayName.toLowerCase()] = a.displayIconSmall || a.displayIcon;
+    });
+    // repintar filas ya dibujadas por si la carga llegó tarde
+    document.querySelectorAll(".cell[data-guess-agents]").forEach(el=>{
+      const guessAgents = JSON.parse(el.dataset.guessAgents);
+      const targetAgents = JSON.parse(el.dataset.targetAgents);
+      el.querySelector(".agentslots").outerHTML = agentSlotsHTML(guessAgents, targetAgents);
+    });
+  }catch(e){
+    // sin íconos disponibles, se usa el texto como respaldo
+  }
+}
+function agentSlotsHTML(guessAgents, targetAgents){
+  const slots = [0,1,2].map(i=>{
+    const name = (guessAgents || [])[i];
+    if(!name){
+      return `<div class="agentslot wrong"><span>—</span></div>`;
+    }
+    const state = matchAgentSlot(name, i, targetAgents);
+    const icon = AGENT_ICONS[name.toLowerCase()];
+    const inner = icon
+      ? `<img src="${icon}" alt="${name}" title="${name}">`
+      : `<span>${name}</span>`;
+    return `<div class="agentslot ${state}">${inner}</div>`;
+  });
+  return `<div class="agentslots">${slots.join("")}</div>`;
+}
+
+// ---------- STATE ----------
+let selectedRegions = new Set(["AMER","EMEA","PAC","CN"]); // regiones activas para el próximo juego
+let activeRegions = new Set(selectedRegions); // regiones con las que se está jugando ahora
+let pool = [];
+let target = null;
+let guesses = [];
+let maxGuesses = 8;
+let finished = false;
+
+const $ = sel => document.querySelector(sel);
+const REGION_ORDER = ["AMER","EMEA","PAC","CN"];
+
+function poolFor(regionsSet){
+  return PLAYERS.filter(p => regionsSet.has(p.r));
+}
+
+function labelFor(regionsSet){
+  if(regionsSet.size === 4) return "Tier 1 Global";
+  return REGION_ORDER.filter(r=>regionsSet.has(r)).map(r=>REGION_LABEL[r]).join(" + ");
+}
+
+function newGame(regionsSet){
+  activeRegions = new Set(regionsSet);
+  pool = poolFor(activeRegions);
+  target = pool[Math.floor(Math.random()*pool.length)];
+  guesses = [];
+  finished = false;
+  $("#modeLabel").textContent = labelFor(activeRegions);
+  $("#rows").innerHTML = "";
+  $("#guessInput").value = "";
+  $("#guessInput").disabled = false;
+  $("#guessBtn").disabled = false;
+  $("#endcard").classList.remove("show","win","lose");
+  renderAmmo();
+  updateCounter();
+}
+
+function renderTabs(){
+  const tabs = $("#tabs");
+  tabs.innerHTML = "";
+  REGION_ORDER.forEach(r=>{
+    const label = document.createElement("label");
+    label.className = "tab" + (selectedRegions.has(r) ? " active" : "");
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = selectedRegions.has(r);
+    cb.onchange = () => {
+      if(cb.checked) selectedRegions.add(r); else selectedRegions.delete(r);
+      if(selectedRegions.size === 0){ selectedRegions.add(r); cb.checked = true; } // no dejar 0 regiones
+      label.classList.toggle("active", selectedRegions.has(r));
+      updateRegionCount();
+    };
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(REGION_LABEL[r]));
+    tabs.appendChild(label);
+  });
+  updateRegionCount();
+}
+
+function updateRegionCount(){
+  $("#regionCount").textContent = labelFor(selectedRegions) + " · " + poolFor(selectedRegions).length + " jugadores";
+}
+
+function renderAmmo(){
+  const ammo = $("#ammo");
+  ammo.innerHTML = "";
+  for(let i=0;i<maxGuesses;i++){
+    const p = document.createElement("div");
+    p.className = "pip" + (i < guesses.length ? " used" : "");
+    ammo.appendChild(p);
+  }
+}
+
+function updateCounter(){
+  $("#guessCount").textContent = guesses.length + " / " + maxGuesses;
+}
+
+function matchCountry(g,t){
+  if(g.c === t.c) return "correct";
+  if(CONTINENT[g.c] === CONTINENT[t.c]) return "close";
+  return "wrong";
+}
+function matchExact(a,b){ return a===b ? "correct" : "wrong"; }
+
+// devuelve el estado de UNA posición (0,1,2) del top-3 del jugador adivinado, comparado contra el target
+function matchAgentSlot(guessAgent, slotIndex, targetAgents){
+  if(!guessAgent) return "wrong";
+  const ta = targetAgents || [];
+  const idx = ta.findIndex(a => a.toLowerCase() === guessAgent.toLowerCase());
+  if(idx === -1) return "wrong";        // el target no usa este agente
+  if(idx === slotIndex) return "correct"; // el target lo usa exactamente en la misma posición
+  return "close";                        // el target lo usa, pero en otra posición (lo usa "menos")
+}
+
+function fmtEarnings(n){
+  if(n === undefined || n === null) return "Sin datos";
+  return "$" + n.toLocaleString("es-AR");
+}
+
+function matchEarnings(g,t){
+  const ge = g.e, te = t.e;
+  if(ge === undefined || te === undefined) return {state:"wrong", arrow:""};
+  if(ge === te) return {state:"correct", arrow:"="};
+  const diff = Math.abs(ge - te) / Math.max(te, 1);
+  const state = diff <= 0.15 ? "close" : "wrong";
+  const arrow = ge < te ? "▲" : "▼"; // ▲ = el objetivo gana MÁS que tu intento (apuntá más alto), ▼ = el objetivo gana MENOS (apuntá más bajo)
+  return {state, arrow};
+}
+
+function renderRow(g){
+  const row = document.createElement("div");
+  row.className = "row";
+
+  const cName = document.createElement("div");
+  cName.className = "cell name";
+  cName.innerHTML = `<div>${g.n}</div>`;
+  row.appendChild(cName);
+
+  const countryState = matchCountry(g, target);
+  const cCountry = document.createElement("div");
+  cCountry.className = "cell " + countryState;
+  cCountry.innerHTML = `<div class="lbl">País</div><div>${g.c}</div>`;
+  row.appendChild(cCountry);
+
+  const regState = matchExact(g.r, target.r);
+  const cReg = document.createElement("div");
+  cReg.className = "cell " + regState;
+  cReg.innerHTML = `<div class="lbl">Región</div><div>${REGION_LABEL[g.r]}</div>`;
+  row.appendChild(cReg);
+
+  const teamState = matchExact(g.t, target.t);
+  const cTeam = document.createElement("div");
+  cTeam.className = "cell " + teamState;
+  cTeam.innerHTML = `<div class="lbl">Equipo</div><div>${g.t}</div>`;
+  row.appendChild(cTeam);
+
+  const iglState = matchExact(g.g, target.g);
+  const cIgl = document.createElement("div");
+  cIgl.className = "cell " + iglState;
+  cIgl.innerHTML = `<div class="lbl">IGL</div><div>${g.g ? "Sí" : "No"}</div>`;
+  row.appendChild(cIgl);
+
+  const cAgents = document.createElement("div");
+  cAgents.className = "cell";
+  cAgents.dataset.guessAgents = JSON.stringify(g.a || []);
+  cAgents.dataset.targetAgents = JSON.stringify(target.a || []);
+  cAgents.innerHTML = `<div class="lbl">Top 3</div>` + agentSlotsHTML(g.a, target.a);
+  row.appendChild(cAgents);
+
+  const earnInfo = matchEarnings(g, target);
+  const cEarn = document.createElement("div");
+  cEarn.className = "cell " + earnInfo.state;
+  cEarn.innerHTML = `<div class="lbl">Earnings</div>
+    <div class="earnwrap">
+      <span class="earnarrow">${earnInfo.arrow}</span>
+      <span class="earnval">${fmtEarnings(g.e)}</span>
+    </div>`;
+  row.appendChild(cEarn);
+
+  $("#rows").prepend(row);
+}
+
+function endGame(win){
+  finished = true;
+  $("#guessInput").disabled = true;
+  $("#guessBtn").disabled = true;
+  const card = $("#endcard");
+  card.classList.add("show", win ? "win" : "lose");
+  $("#endTitle").textContent = win ? "¡Acertaste!" : "Se acabaron los intentos";
+  $("#endText").textContent = win
+    ? `Era ${target.n} (${target.t}, ${target.c}) en ${guesses.length} intento${guesses.length===1?"":"s"}.`
+    : `Era ${target.n} — ${target.t}, ${target.c}.`;
+}
+
+function submitGuess(name){
+  if(finished) return;
+  const found = pool.find(p => p.n.toLowerCase() === name.trim().toLowerCase());
+  if(!found){ return; }
+  if(guesses.some(g=>g.n===found.n)) return;
+  guesses.push(found);
+  renderRow(found);
+  renderAmmo();
+  updateCounter();
+  $("#guessInput").value = "";
+  $("#suggestions").style.display = "none";
+
+  const won = found.n === target.n;
+  const outOfTries = guesses.length >= maxGuesses;
+
+  if(lobby.active && lobby.roomRef){
+    const update = { attempts: guesses.length };
+    if(won){ update.status = "won"; update.finishedAt = Date.now(); }
+    lobby.roomRef.child("players/" + lobby.role).update(update);
+  }
+
+  if(lobby.active){
+    // en modo lobby, el cierre de partida lo maneja el listener de Firebase
+    return;
+  }
+
+  if(won){
+    endGame(true);
+  } else if(outOfTries){
+    endGame(false);
+  }
+}
+
+// ---------- AUTOCOMPLETE ----------
+const input = $("#guessInput");
+const sugBox = $("#suggestions");
+let hiIndex = -1;
+
+input.addEventListener("input", () => {
+  const val = input.value.trim().toLowerCase();
+  sugBox.innerHTML = "";
+  hiIndex = -1;
+  if(!val){ sugBox.style.display="none"; return; }
+  const already = new Set(guesses.map(g=>g.n));
+  const matches = pool.filter(p => p.n.toLowerCase().includes(val) && !already.has(p.n)).slice(0,8);
+  if(matches.length === 0){ sugBox.style.display="none"; return; }
+  matches.forEach(p=>{
+    const d = document.createElement("div");
+    d.className = "suggestion";
+    d.innerHTML = `<span>${p.n}</span><small>${p.t}</small>`;
+    d.onclick = () => submitGuess(p.n);
+    sugBox.appendChild(d);
+  });
+  sugBox.style.display = "block";
+});
+
+input.addEventListener("keydown", (e)=>{
+  const items = [...sugBox.children];
+  if(e.key === "ArrowDown"){ e.preventDefault(); hiIndex = Math.min(hiIndex+1, items.length-1); }
+  else if(e.key === "ArrowUp"){ e.preventDefault(); hiIndex = Math.max(hiIndex-1, 0); }
+  items.forEach((it,i)=>it.classList.toggle("hi", i===hiIndex));
+  if(e.key === "Enter" && hiIndex >= 0 && items[hiIndex]){
+    e.preventDefault();
+    submitGuess(items[hiIndex].querySelector("span").textContent);
+  }
+});
+
+document.addEventListener("click",(e)=>{
+  if(!$(".guessbox").contains(e.target)) sugBox.style.display="none";
+});
+
+$("#guessForm").addEventListener("submit",(e)=>{
+  e.preventDefault();
+  submitGuess(input.value);
+});
+
+$("#newGameBtn").addEventListener("click", ()=>{
+  if(lobby.active){
+    if(lobby.roomRef) lobby.roomRef.remove().catch(()=>{});
+    resetLobbyUI();
+  } else {
+    newGame(activeRegions);
+  }
+});
+$("#applyRegionsBtn").addEventListener("click", ()=> newGame(selectedRegions));
+
+$("#copyBtn").addEventListener("click", ()=>{
+  const emojiRow = g => {
+    const c = matchCountry(g,target) === "correct" ? "🟩" : matchCountry(g,target)==="close" ? "🟨" : "⬛";
+    const r = matchExact(g.r,target.r)==="correct" ? "🟩" : "⬛";
+    const t = matchExact(g.t,target.t)==="correct" ? "🟩" : "⬛";
+    const i = matchExact(g.g,target.g)==="correct" ? "🟩" : "⬛";
+    const a = [0,1,2].map(idx=>{
+      const st = matchAgentSlot((g.a||[])[idx], idx, target.a);
+      return st==="correct" ? "🟩" : st==="close" ? "🟨" : "⬛";
+    }).join("");
+    const e = matchEarnings(g,target).state === "correct" ? "🟩" : matchEarnings(g,target).state==="close" ? "🟨" : "⬛";
+    return c+r+t+i+a+e;
+  };
+  const text = `VCTLE (${labelFor(activeRegions)}) ${guesses.length}/${maxGuesses}\n` + guesses.map(emojiRow).join("\n");
+  navigator.clipboard?.writeText(text);
+  const btn = $("#copyBtn");
+  const old = btn.textContent;
+  btn.textContent = "¡Copiado!";
+  setTimeout(()=>btn.textContent = old, 1500);
+});
+
+// ---------- LOBBY (Firebase Realtime Database) ----------
+const firebaseConfig = {
+  apiKey: "AIzaSyCdTUlywaPRsCuKhVYaL0elxQLwyYLY7Is",
+  authDomain: "vctle-lobby.firebaseapp.com",
+  databaseURL: "https://vctle-lobby-default-rtdb.firebaseio.com",
+  projectId: "vctle-lobby",
+  storageBucket: "vctle-lobby.firebasestorage.app",
+  messagingSenderId: "666063588046",
+  appId: "1:666063588046:web:919eba27cc55e612061e9f"
+};
+let fbApp = null, fbDb = null;
+try{
+  fbApp = firebase.initializeApp(firebaseConfig);
+  fbDb = firebase.database();
+}catch(e){ /* firebase no disponible */ }
+
+let lobby = {
+  active: false,
+  role: null,      // "host" | "guest"
+  code: null,
+  roomRef: null,
+  regions: null,
+  myName: "",
+  rivalName: "",
+  unsub: null,
+};
+let lobbyRegionSel = new Set(["AMER","EMEA","PAC","CN"]);
+
+function genRoomCode(){
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for(let i=0;i<4;i++) code += chars[Math.floor(Math.random()*chars.length)];
+  return code;
+}
+
+function renderLobbyRegionTabs(){
+  const wrap = $("#lobbyRegionTabs");
+  wrap.innerHTML = "";
+  REGION_ORDER.forEach(r=>{
+    const label = document.createElement("label");
+    label.className = "tab" + (lobbyRegionSel.has(r) ? " active" : "");
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = lobbyRegionSel.has(r);
+    cb.onchange = () => {
+      if(cb.checked) lobbyRegionSel.add(r); else lobbyRegionSel.delete(r);
+      if(lobbyRegionSel.size === 0){ lobbyRegionSel.add(r); cb.checked = true; }
+      label.classList.toggle("active", lobbyRegionSel.has(r));
+    };
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(REGION_LABEL[r]));
+    wrap.appendChild(label);
+  });
+}
+
+// --- Modal open/close/tabs ---
+$("#openLobbyBtn").addEventListener("click", ()=>{
+  renderLobbyRegionTabs();
+  $("#lobbyModal").classList.remove("hidden");
+});
+$("#closeLobbyBtn").addEventListener("click", ()=> $("#lobbyModal").classList.add("hidden"));
+document.querySelectorAll(".modal-tab").forEach(tab=>{
+  tab.addEventListener("click", ()=>{
+    document.querySelectorAll(".modal-tab").forEach(t=>t.classList.remove("active"));
+    tab.classList.add("active");
+    document.querySelectorAll(".modal-pane").forEach(p=>p.classList.remove("active"));
+    $("#pane" + (tab.dataset.tab === "create" ? "Create" : "Join")).classList.add("active");
+  });
+});
+
+// --- Crear sala ---
+$("#createRoomBtn").addEventListener("click", async ()=>{
+  const name = $("#createName").value.trim();
+  const errEl = $("#createError");
+  errEl.textContent = "";
+  if(!name){ errEl.textContent = "Ingresá tu nombre."; return; }
+  if(!fbDb){ errEl.textContent = "No se pudo conectar al servidor de salas."; return; }
+
+  const regions = [...lobbyRegionSel];
+  const roomPool = PLAYERS.filter(p => regions.includes(p.r));
+  const targetPlayer = roomPool[Math.floor(Math.random()*roomPool.length)];
+  const code = genRoomCode();
+
+  const room = {
+    createdAt: Date.now(),
+    regions: regions,
+    target: targetPlayer.n,
+    status: "waiting",
+    players: {
+      host: { name, attempts: 0, status: "playing", joinedAt: Date.now() }
+    }
+  };
+
+  try{
+    await fbDb.ref("rooms/" + code).set(room);
+  }catch(e){
+    errEl.textContent = "No se pudo crear la sala. Intentá de nuevo.";
+    return;
+  }
+
+  lobby.role = "host";
+  lobby.code = code;
+  lobby.regions = regions;
+  lobby.myName = name;
+  lobby.roomRef = fbDb.ref("rooms/" + code);
+
+  $("#paneCreate").classList.remove("active");
+  $("#paneJoin").classList.remove("active");
+  document.querySelectorAll(".modal-tabs")[0].style.display = "none";
+  $("#roomWaitPane").style.display = "block";
+  $("#roomCodeText").textContent = code;
+
+  listenRoom();
+});
+
+// --- Unirse a sala ---
+$("#joinRoomBtn").addEventListener("click", async ()=>{
+  const name = $("#joinName").value.trim();
+  const code = $("#joinCode").value.trim().toUpperCase();
+  const errEl = $("#joinError");
+  errEl.textContent = "";
+  if(!name){ errEl.textContent = "Ingresá tu nombre."; return; }
+  if(!code || code.length !== 4){ errEl.textContent = "Ingresá un código válido de 4 caracteres."; return; }
+  if(!fbDb){ errEl.textContent = "No se pudo conectar al servidor de salas."; return; }
+
+  const ref = fbDb.ref("rooms/" + code);
+  let snap;
+  try{
+    snap = await ref.once("value");
+  }catch(e){
+    errEl.textContent = "No se pudo buscar la sala.";
+    return;
+  }
+  const roomData = snap.val();
+  if(!roomData){ errEl.textContent = "No existe una sala con ese código."; return; }
+  if(roomData.status !== "waiting"){ errEl.textContent = "Esa sala ya está en juego o finalizada."; return; }
+
+  try{
+    await ref.child("players/guest").set({ name, attempts: 0, status: "playing", joinedAt: Date.now() });
+    await ref.child("status").set("playing");
+  }catch(e){
+    errEl.textContent = "No se pudo unir a la sala.";
+    return;
+  }
+
+  lobby.role = "guest";
+  lobby.code = code;
+  lobby.regions = roomData.regions;
+  lobby.myName = name;
+  lobby.roomRef = ref;
+
+  listenRoom();
+});
+
+$("#cancelRoomBtn").addEventListener("click", async ()=>{
+  if(lobby.roomRef) { try{ await lobby.roomRef.remove(); }catch(e){} }
+  resetLobbyUI();
+});
+
+function resetLobbyUI(){
+  if(lobby.unsub) lobby.unsub();
+  lobby = { active:false, role:null, code:null, roomRef:null, regions:null, myName:"", rivalName:"", unsub:null };
+  $("#lobbyModal").classList.add("hidden");
+  $("#roomWaitPane").style.display = "none";
+  document.querySelectorAll(".modal-tabs")[0].style.display = "flex";
+  $("#paneCreate").classList.add("active");
+  $("#vsbar").style.display = "none";
+  $("#openLobbyBtn").style.display = "inline-block";
+  newGame(selectedRegions); // volver a modo 1 jugador
+}
+
+// --- Escuchar la sala en tiempo real ---
+function listenRoom(){
+  lobby.unsub = lobby.roomRef.on("value", (snap)=>{
+    const data = snap.val();
+    if(!data) return; // la sala fue eliminada
+
+    if(data.status === "playing" && !lobby.active){
+      // arrancar la partida sincronizada
+      lobby.active = true;
+      const rivalKey = lobby.role === "host" ? "guest" : "host";
+      lobby.rivalName = (data.players[rivalKey] && data.players[rivalKey].name) || "Rival";
+      startLobbyGame(data);
+    }
+
+    if(lobby.active){
+      renderVsBar(data);
+      // si alguien ganó y todavía no mostramos el cierre
+      const hostP = data.players.host, guestP = data.players.guest;
+      if(hostP && guestP && (hostP.status === "won" || guestP.status === "won") && !finished){
+        const iWon = data.players[lobby.role].status === "won";
+        const rivalKey2 = lobby.role === "host" ? "guest" : "host";
+        const rivalWon = data.players[rivalKey2].status === "won";
+        let firstWinnerKey = null;
+        if(hostP.status === "won" && guestP.status === "won"){
+          firstWinnerKey = hostP.finishedAt <= guestP.finishedAt ? "host" : "guest";
+        } else if(hostP.status === "won"){ firstWinnerKey = "host"; }
+        else if(guestP.status === "won"){ firstWinnerKey = "guest"; }
+        endLobbyGame(firstWinnerKey === lobby.role);
+      }
+    }
+  });
+}
+
+function renderVsBar(data){
+  const vs = $("#vsbar");
+  vs.style.display = "flex";
+  const hostP = data.players.host || {name:"?", attempts:0, status:"playing"};
+  const guestP = data.players.guest || {name:"Esperando…", attempts:0, status:"playing"};
+  const meIsHost = lobby.role === "host";
+
+  const pipsHTML = (p) => {
+    let out = "";
+    for(let i=0;i<maxGuesses;i++){
+      const cls = i < p.attempts ? (p.status==="won" && i===p.attempts-1 ? "used won" : "used") : "";
+      out += `<div class="vspip ${cls}"></div>`;
+    }
+    return out;
+  };
+  const statusText = (p) => p.status === "won" ? "¡Ganó!" : `${p.attempts}/${maxGuesses} intentos`;
+
+  vs.innerHTML = `
+    <div class="vsplayer">
+      <div class="vname ${meIsHost?'you':''}">${hostP.name || '...'}</div>
+      <div class="vspips">${pipsHTML(hostP)}</div>
+      <div class="vsstatus ${hostP.status==='won'?'won':''}">${statusText(hostP)}</div>
+    </div>
+    <div class="vsdivider">VS</div>
+    <div class="vsplayer">
+      <div class="vname ${!meIsHost?'you':''}">${guestP.name || '...'}</div>
+      <div class="vspips">${pipsHTML(guestP)}</div>
+      <div class="vsstatus ${guestP.status==='won'?'won':''}">${statusText(guestP)}</div>
+    </div>
+  `;
+}
+
+function startLobbyGame(data){
+  $("#lobbyModal").classList.add("hidden");
+  $("#openLobbyBtn").style.display = "none";
+  activeRegions = new Set(data.regions);
+  pool = poolFor(activeRegions);
+  target = pool.find(p => p.n === data.target) || pool[0];
+  guesses = [];
+  finished = false;
+  $("#modeLabel").textContent = labelFor(activeRegions) + " · vs " + lobby.rivalName;
+  $("#rows").innerHTML = "";
+  $("#guessInput").value = "";
+  $("#guessInput").disabled = false;
+  $("#guessBtn").disabled = false;
+  $("#endcard").classList.remove("show","win","lose");
+  renderAmmo();
+  updateCounter();
+  renderVsBar(data);
+}
+
+async function endLobbyGame(iWon){
+  finished = true;
+  $("#guessInput").disabled = true;
+  $("#guessBtn").disabled = true;
+  const card = $("#endcard");
+  card.classList.add("show", iWon ? "win" : "lose");
+  $("#endTitle").textContent = iWon ? "¡Ganaste el duelo!" : "Tu rival adivinó primero";
+  $("#endText").textContent = `Era ${target.n} (${target.t}, ${target.c}).`;
+}
+
+loadAgentIcons();
+renderTabs();
+newGame(selectedRegions);
+</script>
+</body>
+</html>
