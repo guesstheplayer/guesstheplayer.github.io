@@ -431,9 +431,9 @@ const PLAYERS = [
 {n:"Demon1",c:"Estados Unidos",r:"AMER",t:"ENVY",g:0,e:253060,a:["Jett","Neon","Chamber"]},
 {n:"nightz",c:"Reino Unido",r:"AMER",t:"ENVY",g:0,e:10670,a:["Omen","Phoenix","Iso"]},
 // EMEA
-{n:"crashies",c:"Estados Unidos",r:"EMEA",t:"FNATIC",g:0},
-{n:"Boaster",c:"Reino Unido",r:"EMEA",t:"FNATIC",g:1},
-{n:"Cloud",c:"Rusia",r:"EMEA",t:"FNATIC",g:0},
+{n:"crashies",c:"Estados Unidos",r:"EMEA",t:"FNATIC",g:0,e:380650,a:["Sova","Fade","Skye"]},
+{n:"Boaster",c:"Reino Unido",r:"EMEA",t:"FNATIC",g:1,e:457684,a:["Omen","Astra","Harbor"]},
+{n:"Cloud",c:"Rusia",r:"EMEA",t:"FNATIC",g:0,e:54440,a:["Sova","Skye","Fade"]},
 {n:"kaajak",c:"Polonia",r:"EMEA",t:"FNATIC",g:0},
 {n:"Alfajer",c:"Turquía",r:"EMEA",t:"FNATIC",g:0},
 {n:"sociablEE",c:"Turquía",r:"EMEA",t:"FUT Esports",g:0},
@@ -666,7 +666,7 @@ function agentSlotsHTML(guessAgents, targetAgents){
 }
 
 // ---------- STATE ----------
-let selectedRegions = new Set(["AMER","EMEA","PAC","CN"]); // regiones activas para el próximo juego
+let selectedRegions = new Set(["AMER"]); // regiones activas para el próximo juego
 let activeRegions = new Set(selectedRegions); // regiones con las que se está jugando ahora
 let pool = [];
 let target = null;
@@ -675,7 +675,7 @@ let maxGuesses = 8;
 let finished = false;
 
 const $ = sel => document.querySelector(sel);
-const REGION_ORDER = ["AMER","EMEA","PAC","CN"];
+const REGION_ORDER = ["AMER"]; // EMEA, PAC y CN ocultas temporalmente hasta completar agentes/earnings
 
 function poolFor(regionsSet){
   return PLAYERS.filter(p => regionsSet.has(p.r));
@@ -972,7 +972,7 @@ let lobby = {
   rivalName: "",
   unsub: null,
 };
-let lobbyRegionSel = new Set(["AMER","EMEA","PAC","CN"]);
+let lobbyRegionSel = new Set(["AMER"]);
 
 function genRoomCode(){
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
